@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Penghitung Keterlambatan Pegawai</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      max-width: 500px;
+    }
+    label, select, input {
+      display: block;
+      margin: 10px 0;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #ccc;
+      background: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+  <h2>Penghitung Keterlambatan Pegawai</h2>
+
+  <label for="hari">Hari:</label>
+  <select id="hari">
+    <option value="Senin">Senin</option>
+    <option value="Selasa">Selasa</option>
+    <option value="Rabu">Rabu</option>
+    <option value="Kamis">Kamis</option>
+    <option value="Jumat">Jumat</option>
+  </select>
+
+  <label for="jamMasuk">Jam Masuk:</label>
+  <input type="time" id="jamMasuk" required>
+
+  <button onclick="hitung()">Hitung</button>
+
+  <div class="result" id="hasil"></div>
+
+  <script>
+    function hitung() {
+      const hari = document.getElementById("hari").value;
+      const jamMasukInput = document.getElementById("jamMasuk").value;
+      const hasilDiv = document.getElementById("hasil");
+
+      if (!jamMasukInput) {
+        hasilDiv.innerHTML = "Silakan masukkan jam masuk.";
+        return;
+      }
+
+      const toleransiMasuk = new Date(`1970-01-01T08:30:00`);
+      const jamKerjaMulai = new Date(`1970-01-01T07:30:00`);
+      const jamMasuk = new Date(`1970-01-01T${jamMasukInput}`);
+
+      // Tentukan jam pulang standar
+      let jamPulang = hari === "Jumat" 
+                      ? new Date(`1970-01-01T16:30:00`) 
+                      : new Date(`1970-01-01T16:00:00`);
+
+      // Cek keterlambatan
+      let status = "Tepat Waktu";
+      let keterlambatanMenit = 0;
+
+      if (jamMasuk > jamKerjaMulai && jamMasuk <= toleransiMasuk) {
+        keterlambatanMenit = Math.floor((jamMasuk - jamKerjaMulai) / 60000);
+        jamPulang.setMinutes(jamPulang.getMinutes() + keterlambatanMenit);
+        status = "Terlambat " + keterlambatanMenit + " menit";
+      } else if (jamMasuk > toleransiMasuk) {
+        status = "Terlambat Melebihi Toleransi!";
+      }
+
+      // Format waktu
+      function formatJam(date) {
+        return date.toTimeString().substring(0, 5);
+      }
+
+      // Tampilkan hasil
+      let hasil = `<strong>Status:</strong> ${status}<br>`;
+      if (status.startsWith("Terlambat")) {
+        hasil += `<strong>Jam Pulang Seharusnya:</strong> ${formatJam(jamPulang)}`;
+      } else if (status === "Tepat Waktu") {
+        hasil += `<strong>Jam Pulang:</strong> ${formatJam(jamPulang)}`;
+      }
+
+      hasilDiv.innerHTML = hasil;
+    }
+  </script>
+</body>
+</html>
