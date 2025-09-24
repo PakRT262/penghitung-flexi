@@ -2,91 +2,53 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <title>Penghitung Flexi Pegawai (Dibulatkan Per Menit)</title>
-  <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet" />
+  <title>Penghitung Flexi Pegawai (Detik Akurat)</title>
   <style>
     body {
-      font-family: 'Comic Neue', cursive, Arial, sans-serif;
+      font-family: Arial, sans-serif;
       margin: 40px auto;
       max-width: 500px;
-      background: #f0f8ff;
-      color: #333;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
-      padding: 20px 30px;
-      border-radius: 12px;
+      background: #f9f9f9;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
     h2 {
       text-align: center;
-      color: #0066cc;
-      margin-bottom: 15px;
+      color: #333;
     }
     label, select, input, button {
       display: block;
-      margin: 10px 0;
+      margin: 15px 0;
       width: 100%;
       font-size: 16px;
     }
-    select, input {
+    input, select {
       padding: 10px;
-      border-radius: 8px;
-      border: 1.5px solid #0066cc;
-      box-sizing: border-box;
-      transition: border-color 0.3s ease;
-    }
-    select:focus, input:focus {
-      border-color: #004080;
-      outline: none;
+      border-radius: 5px;
+      border: 1px solid #aaa;
     }
     button {
-      margin-top: 20px;
-      background: #0066cc;
+      padding: 10px;
+      background: #007bff;
       color: white;
-      padding: 12px;
       border: none;
-      border-radius: 10px;
-      font-weight: 700;
+      border-radius: 5px;
       cursor: pointer;
-      box-shadow: 0 4px 6px rgba(0,102,204,0.4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: background-color 0.3s ease;
     }
     button:hover {
-      background-color: #004080;
+      background: #0056b3;
     }
     .result {
-      margin-top: 25px;
-      padding: 20px;
-      border: 2px dashed #0066cc;
-      border-radius: 12px;
-      background: #e6f0ff;
-      font-size: 18px;
-      text-align: center;
-      min-height: 80px;
-    }
-    .header-img {
-      display: block;
-      margin: 0 auto 15px;
-      width: 100px;
-      filter: drop-shadow(1px 1px 1px #999);
-      animation: bounce 2s infinite;
-    }
-    @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-15px); }
-    }
-    .btn-icon {
-      width: 20px;
-      height: 20px;
-      filter: invert(1);
+      margin-top: 20px;
+      padding: 15px;
+      background: #eef;
+      border-radius: 5px;
     }
   </style>
 </head>
 <body>
   <h2>Penghitung Flexi Pegawai</h2>
-  <img src="https://cdn-icons-png.flaticon.com/512/2921/2921822.png" alt="Clock Icon" class="header-img" />
 
   <label for="hari">Hari:</label>
   <select id="hari">
@@ -97,14 +59,10 @@
     <option value="Jumat">Jumat</option>
   </select>
 
-  <label for="jamMasuk">Jam Masuk:</label>
-  <!-- Input dengan detik -->
-  <input type="time" id="jamMasuk" step="1" required />
+  <label for="jamMasuk">Jam Masuk (format: HH:MM:SS):</label>
+  <input type="text" id="jamMasuk" placeholder="Contoh: 07:35:32" required>
 
-  <button onclick="hitung()">
-    <img src="https://cdn-icons-png.flaticon.com/512/60/60525.png" alt="Calculate Icon" class="btn-icon" />
-    Hitung
-  </button>
+  <button onclick="hitung()">Hitung</button>
 
   <div class="result" id="hasil"></div>
 
@@ -114,8 +72,10 @@
       const jamMasukInput = document.getElementById("jamMasuk").value;
       const hasilDiv = document.getElementById("hasil");
 
-      if (!jamMasukInput) {
-        hasilDiv.innerHTML = "⏰ Silakan masukkan jam masuk.";
+      // Validasi format waktu
+      const regexJam = /^\d{2}:\d{2}:\d{2}$/;
+      if (!regexJam.test(jamMasukInput)) {
+        hasilDiv.innerHTML = "⏰ Format waktu salah. Gunakan HH:MM:SS (contoh: 07:35:32)";
         return;
       }
 
@@ -130,15 +90,10 @@
       let status = "Tepat Waktu 😊";
 
       if (jamMasuk > jamKerjaMulai && jamMasuk <= toleransiMasuk) {
-        // Hitung keterlambatan dalam milidetik
         const keterlambatanMs = jamMasuk - jamKerjaMulai;
-
-        // Hitung keterlambatan dalam menit, dibulatkan ke atas
         const keterlambatanMenit = Math.ceil(keterlambatanMs / 60000);
 
-        // Tambahkan ke jam pulang
         jamPulang.setMinutes(jamPulang.getMinutes() + keterlambatanMenit);
-
         status = `Terlambat ⏳ ${keterlambatanMenit} menit`;
       } else if (jamMasuk > toleransiMasuk) {
         status = "Terlambat Melebihi Toleransi! 🚨";
@@ -154,7 +109,7 @@
       let hasil = `<strong>Status:</strong> ${status}<br>`;
       if (status.startsWith("Terlambat")) {
         hasil += `<strong>Jam Pulang Seharusnya:</strong> ${formatJam(jamPulang)}`;
-      } else if (status === "Tepat Waktu 😊") {
+      } else {
         hasil += `<strong>Jam Pulang:</strong> ${formatJam(jamPulang)}`;
       }
 
