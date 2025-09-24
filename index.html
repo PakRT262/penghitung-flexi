@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <title>Penghitung Keterlambatan Pegawai</title>
+  <title>Penghitung Flexi Pegawai (Detik)</title>
   <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet" />
   <style>
     body {
@@ -88,7 +88,7 @@
   </style>
 </head>
 <body>
-  <h2>Penghitung Keterlambatan Pegawai</h2>
+  <h2>Penghitung Flexi Pegawai</h2>
   <img src="https://cdn-icons-png.flaticon.com/512/2921/2921822.png" alt="Clock Icon" class="header-img" />
   
   <label for="hari">Hari:</label>
@@ -101,7 +101,8 @@
   </select>
 
   <label for="jamMasuk">Jam Masuk:</label>
-  <input type="time" id="jamMasuk" required />
+  <!-- step="1" supaya bisa input detik -->
+  <input type="time" id="jamMasuk" step="1" required />
 
   <button onclick="hitung()">
     <img src="https://cdn-icons-png.flaticon.com/512/60/60525.png" alt="Calculate Icon" class="btn-icon" />
@@ -121,33 +122,43 @@
         return;
       }
 
-      const toleransiMasuk = new Date(`1970-01-01T08:30:00`);
-      const jamKerjaMulai = new Date(`1970-01-01T07:30:00`);
+      // Jam masuk dengan detik, format input "HH:MM:SS"
       const jamMasuk = new Date(`1970-01-01T${jamMasukInput}`);
 
-      // Tentukan jam pulang standar
-      let jamPulang = hari === "Jumat" 
-                      ? new Date(`1970-01-01T16:30:00`) 
-                      : new Date(`1970-01-01T16:00:00`);
+      // Jam kerja mulai dan toleransi
+      const jamKerjaMulai = new Date(`1970-01-01T07:30:00`);
+      const toleransiMasuk = new Date(`1970-01-01T08:30:00`);
 
-      // Cek keterlambatan
+      // Jam pulang standar
+      let jamPulang = hari === "Jumat"
+        ? new Date(`1970-01-01T16:30:00`)
+        : new Date(`1970-01-01T16:00:00`);
+
       let status = "Tepat Waktu 😊";
-      let keterlambatanMenit = 0;
+      let keterlambatanMs = 0;
 
       if (jamMasuk > jamKerjaMulai && jamMasuk <= toleransiMasuk) {
-        keterlambatanMenit = Math.floor((jamMasuk - jamKerjaMulai) / 60000);
-        jamPulang.setMinutes(jamPulang.getMinutes() + keterlambatanMenit);
-        status = `Terlambat ⏳ ${keterlambatanMenit} menit`;
+        keterlambatanMs = jamMasuk - jamKerjaMulai;
+        jamPulang = new Date(jamPulang.getTime() + keterlambatanMs);
+
+        // Bulatkan jam pulang ke atas detik terdekat
+        jamPulang.setMilliseconds(0);
+        if (jamPulang.getSeconds() > 0) {
+          jamPulang.setSeconds(jamPulang.getSeconds() + 1);
+        }
+
+        const keterlambatanDetik = Math.ceil(keterlambatanMs / 1000);
+        const menit = Math.floor(keterlambatanDetik / 60);
+        const detik = keterlambatanDetik % 60;
+        status = `Terlambat ⏳ ${menit} menit ${detik} detik`;
       } else if (jamMasuk > toleransiMasuk) {
         status = "Terlambat Melebihi Toleransi! 🚨";
       }
 
-      // Format waktu
       function formatJam(date) {
-        return date.toTimeString().substring(0, 5);
+        return date.toTimeString().substring(0, 8); // HH:MM:SS
       }
 
-      // Tampilkan hasil
       let hasil = `<strong>Status:</strong> ${status}<br>`;
       if (status.startsWith("Terlambat")) {
         hasil += `<strong>Jam Pulang Seharusnya:</strong> ${formatJam(jamPulang)}`;
@@ -160,4 +171,3 @@
   </script>
 </body>
 </html>
-  
