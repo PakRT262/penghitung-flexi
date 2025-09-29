@@ -2,119 +2,360 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <title>Penghitung Flexi Pegawai (Detik Akurat)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aplikasi Hitung Penggantian Keterlambatan</title>
+  <!-- SheetJS for Excel export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 40px auto;
-      max-width: 500px;
-      background: #f9f9f9;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    :root {
+      --bg: #0f172a;           /* slate-900 */
+      --card: #111827;         /* gray-900 */
+      --muted: #94a3b8;        /* slate-400 */
+      --text: #e5e7eb;         /* gray-200 */
+      --accent: #22c55e;       /* green-500 */
+      --accent-2: #3b82f6;     /* blue-500 */
+      --warn: #f59e0b;         /* amber-500 */
+      --danger: #ef4444;       /* red-500 */
+      --shadow: 0 10px 25px rgba(0,0,0,.35);
+      --radius: 16px;
     }
-    h2 {
-      text-align: center;
-      color: #333;
+    *{box-sizing:border-box}
+    body{
+      margin:0; padding:16px; font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(80vw 80vh at 20% 10%, #0b1224 10%, #050816 65%), var(--bg);
+      color: var(--text);
     }
-    label, select, input, button {
-      display: block;
-      margin: 15px 0;
-      width: 100%;
-      font-size: 16px;
+    .container{ max-width:980px; margin:0 auto; }
+    .app-title{ font-size: clamp(20px, 3vw, 28px); font-weight:700; letter-spacing:.2px; margin: 4px 0 16px; }
+    .card{ background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)); backdrop-filter: blur(6px);
+           border:1px solid rgba(255,255,255,.08); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .grid{ display:grid; gap:12px; }
+    .grid.cols-2{ grid-template-columns: 1fr; }
+    @media(min-width:720px){ .grid.cols-2{ grid-template-columns: 1fr 1fr; } }
+    .section{ padding: 14px; }
+    label{ font-size:.92rem; color: var(--muted); display:block; margin-bottom:6px; }
+    select,input[type=time],input[type=date]{
+      width:100%; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:#0b1220; color:var(--text);
+      outline:none; box-shadow: inset 0 0 0 9999px rgba(255,255,255,.02);
     }
-    input, select {
-      padding: 10px;
-      border-radius: 5px;
-      border: 1px solid #aaa;
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+    .row > div{ flex:1; min-width: 180px; }
+    .btn{
+      appearance:none; border:1px solid rgba(255,255,255,.12); background:#0b1220; color:var(--text);
+      padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:600; transition:.15s ease; box-shadow: var(--shadow);
     }
-    button {
-      padding: 10px;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #0056b3;
-    }
-    .result {
-      margin-top: 20px;
-      padding: 15px;
-      background: #eef;
-      border-radius: 5px;
+    .btn:disabled{ opacity:.55; cursor:not-allowed; }
+    .btn.primary{ background: linear-gradient(135deg, rgba(34,197,94,.18), rgba(34,197,94,.08)); border-color: rgba(34,197,94,.35); }
+    .btn.info{ background: linear-gradient(135deg, rgba(59,130,246,.18), rgba(59,130,246,.08)); border-color: rgba(59,130,246,.35); }
+    .btn.warn{ background: linear-gradient(135deg, rgba(245,158,11,.18), rgba(245,158,11,.08)); border-color: rgba(245,158,11,.35); }
+    .btn.danger{ background: linear-gradient(135deg, rgba(239,68,68,.18), rgba(239,68,68,.08)); border-color: rgba(239,68,68,.35); }
+    .btn:hover{ transform: translateY(-1px); }
+
+    .output{ display:grid; grid-template-columns:1fr; gap:10px; }
+    @media(min-width:640px){ .output{ grid-template-columns: repeat(3, 1fr); } }
+    .stat{ padding:12px; border-radius:12px; background: #0b1220; border:1px solid rgba(255,255,255,.08); }
+    .stat .label{ color:var(--muted); font-size:.85rem; }
+    .stat .value{ font-size:1.2rem; font-weight:700; margin-top:4px; }
+
+    .toolbar { display:flex; gap:8px; flex-wrap:wrap; padding: 12px; border-top:1px solid rgba(255,255,255,.06); }
+
+    table{ width:100%; border-collapse: collapse; }
+    thead th{ text-align:left; font-size:.9rem; color:var(--muted); padding:10px 8px; border-bottom:1px solid rgba(255,255,255,.12); position:sticky; top:0; background: #0b1220; }
+    tbody td{ padding:10px 8px; border-bottom:1px solid rgba(255,255,255,.06); }
+    tbody tr:hover{ background: rgba(255,255,255,.02); }
+    .table-wrap{ max-height: 360px; overflow:auto; border-radius: 0 0 var(--radius) var(--radius); }
+
+    .muted{ color:var(--muted); }
+    .hint{ font-size:.88rem; color:var(--muted); margin:8px 0 0; }
+
+    /* Print styles */
+    @media print {
+      body{ background:#fff; color:#000; }
+      .no-print{ display:none !important; }
+      .card{ box-shadow:none; border:none; }
+      thead th{ background:#fff; color:#000; }
+      .table-wrap{ max-height:unset; overflow:visible; }
     }
   </style>
 </head>
 <body>
-  <h2>Penghitung Flexi Pegawai</h2>
+  <div class="container">
+    <div class="app-title">Aplikasi Hitung Penggantian Keterlambatan</div>
 
-  <label for="hari">Hari:</label>
-  <select id="hari">
-    <option value="Senin">Senin</option>
-    <option value="Selasa">Selasa</option>
-    <option value="Rabu">Rabu</option>
-    <option value="Kamis">Kamis</option>
-    <option value="Jumat">Jumat</option>
-  </select>
+    <!-- Input / Calculator Card -->
+    <div class="card" id="calcCard">
+      <div class="section grid cols-2">
+        <div>
+          <label for="hari">Pilih Hari</label>
+          <select id="hari">
+            <option value="senin">Senin</option>
+            <option value="selasa">Selasa</option>
+            <option value="rabu">Rabu</option>
+            <option value="kamis">Kamis</option>
+            <option value="jumat">Jumat</option>
+          </select>
+        </div>
+        <div>
+          <label for="jamDatang">Jam Kedatangan</label>
+          <input type="time" id="jamDatang" value="07:30" />
+          <div class="hint">Patokan jam masuk: <b>07:30</b> (keterlambatan = selisih menit + 1 menit tambahan)</div>
+        </div>
+      </div>
 
-  <label for="jamMasuk">Jam Masuk (format: HH:MM:SS):</label>
-  <input type="text" id="jamMasuk" placeholder="Contoh: 07:35:32" required>
+      <div class="section row no-print">
+        <button class="btn primary" id="btnHitung">Hitung</button>
+        <button class="btn info" id="btnTambah" disabled>Tambahkan ke Log</button>
+        <button class="btn warn" id="btnReset">Reset</button>
+      </div>
 
-  <button onclick="hitung()">Hitung</button>
+      <div class="section output" id="output">
+        <div class="stat">
+          <div class="label">Jam Pulang Standar</div>
+          <div class="value" id="outStandar">-</div>
+        </div>
+        <div class="stat">
+          <div class="label">Keterlambatan (menit)</div>
+          <div class="value" id="outTerlambat">-</div>
+        </div>
+        <div class="stat">
+          <div class="label">Jam Pulang (Setelah Ganti)</div>
+          <div class="value" id="outPulang">-</div>
+        </div>
+      </div>
+    </div>
 
-  <div class="result" id="hasil"></div>
+    <!-- Rekap & Actions Card -->
+    <div class="card" style="margin-top:16px;">
+      <div class="section grid cols-2">
+        <div class="stat">
+          <div class="label">Total Entri</div>
+          <div class="value" id="sumCount">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">Total Keterlambatan (menit)</div>
+          <div class="value" id="sumLate">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">Rata-rata Keterlambatan (menit)</div>
+          <div class="value" id="sumAvg">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">Total Tambahan (menit) [late+1]</div>
+          <div class="value" id="sumAdded">0</div>
+        </div>
+      </div>
+      <div class="toolbar no-print">
+        <button class="btn info" id="btnExcel">Download Excel</button>
+        <button class="btn" id="btnPrint">Cetak</button>
+        <button class="btn danger" id="btnClear">Hapus Riwayat</button>
+      </div>
+
+      <div class="table-wrap">
+        <table id="logTable">
+          <thead>
+            <tr>
+              <th style="width:60px">No</th>
+              <th>Hari</th>
+              <th>Jam Datang</th>
+              <th>Keterlambatan (menit)</th>
+              <th>Jam Pulang Standar</th>
+              <th>Jam Pulang Ganti</th>
+              <th>Tanggal Input</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <p class="muted" style="margin-top:12px">Contoh: Senin hadir 07:45 ⇒ terlambat 15 menit → pengganti 16 menit ⇒ pulang 16:16.</p>
+  </div>
 
   <script>
-    function hitung() {
-      const hari = document.getElementById("hari").value;
-      const jamMasukInput = document.getElementById("jamMasuk").value;
-      const hasilDiv = document.getElementById("hasil");
+    // ====== Utilities ======
+    const MIN_START = toMinutes('07:30');
+    function toMinutes(t){ const [h,m] = (t||'00:00').split(':').map(Number); return h*60 + (m||0); }
+    function toTime(mins){ const h = Math.floor(mins/60)%24; const m = mins%60; return String(h).padStart(2,'0')+":"+String(m).padStart(2,'0'); }
+    function stdEndByDay(hari){ return (hari === 'jumat') ? '16:30' : '16:00'; }
 
-      // Validasi format waktu
-      const regexJam = /^\d{2}:\d{2}:\d{2}$/;
-      if (!regexJam.test(jamMasukInput)) {
-        hasilDiv.innerHTML = "⏰ Format waktu salah. Gunakan HH:MM:SS (contoh: 07:35:32)";
-        return;
-      }
+    // LocalStorage helpers
+    const LS_KEY = 'log_keterlambatan_v1';
+    function saveLogs(data){ localStorage.setItem(LS_KEY, JSON.stringify(data)); }
+    function loadLogs(){ try{ return JSON.parse(localStorage.getItem(LS_KEY)) || []; }catch(e){ return []; } }
 
-      const jamMasuk = new Date(`1970-01-01T${jamMasukInput}`);
-      const jamKerjaMulai = new Date(`1970-01-01T07:30:00`);
-      const toleransiMasuk = new Date(`1970-01-01T08:30:00`);
+    // ====== State ======
+    let lastCalc = null;           // holds last calculation result
+    let logs = loadLogs();         // persisted logs
 
-      let jamPulang = hari === "Jumat"
-        ? new Date(`1970-01-01T16:30:00`)
-        : new Date(`1970-01-01T16:00:00`);
+    // ====== Elements ======
+    const elHari = document.getElementById('hari');
+    const elJam = document.getElementById('jamDatang');
+    const outStandar = document.getElementById('outStandar');
+    const outTerlambat = document.getElementById('outTerlambat');
+    const outPulang = document.getElementById('outPulang');
 
-      let status = "Tepat Waktu 😊";
+    const btnHitung = document.getElementById('btnHitung');
+    const btnTambah = document.getElementById('btnTambah');
+    const btnReset  = document.getElementById('btnReset');
 
-      if (jamMasuk > jamKerjaMulai && jamMasuk <= toleransiMasuk) {
-        const keterlambatanMs = jamMasuk - jamKerjaMulai;
-        const keterlambatanMenit = Math.ceil(keterlambatanMs / 60000);
+    const btnExcel = document.getElementById('btnExcel');
+    const btnPrint = document.getElementById('btnPrint');
+    const btnClear = document.getElementById('btnClear');
 
-        jamPulang.setMinutes(jamPulang.getMinutes() + keterlambatanMenit);
-        status = `Terlambat ⏳ ${keterlambatanMenit} menit`;
-      } else if (jamMasuk > toleransiMasuk) {
-        status = "Terlambat Melebihi Toleransi! 🚨";
-      }
+    const tbody = document.querySelector('#logTable tbody');
 
-      function formatJam(date) {
-        const jam = String(date.getHours()).padStart(2, '0');
-        const menit = String(date.getMinutes()).padStart(2, '0');
-        const detik = String(date.getSeconds()).padStart(2, '0');
-        return `${jam}:${menit}:${detik}`;
-      }
+    const sumCount = document.getElementById('sumCount');
+    const sumLate  = document.getElementById('sumLate');
+    const sumAvg   = document.getElementById('sumAvg');
+    const sumAdded = document.getElementById('sumAdded');
 
-      let hasil = `<strong>Status:</strong> ${status}<br>`;
-      if (status.startsWith("Terlambat")) {
-        hasil += `<strong>Jam Pulang Seharusnya:</strong> ${formatJam(jamPulang)}`;
-      } else {
-        hasil += `<strong>Jam Pulang:</strong> ${formatJam(jamPulang)}`;
-      }
+    // ====== Core calculation ======
+    function hitung(){
+      const hari = elHari.value;
+      const datang = elJam.value;
+      if(!datang){ alert('Masukkan jam kedatangan.'); return; }
 
-      hasilDiv.innerHTML = hasil;
+      const stdEnd = stdEndByDay(hari);
+      const menitDatang = toMinutes(datang);
+      let terlambat = Math.max(0, menitDatang - MIN_START);
+      const pengganti = terlambat + 1; // +1 menit tambahan
+
+      const pulangStandar = toMinutes(stdEnd);
+      const pulangBaru = pulangStandar + pengganti;
+
+      lastCalc = {
+        hari,
+        jamDatang: datang,
+        terlambat,
+        jamPulangStandar: stdEnd,
+        jamPulangGanti: toTime(pulangBaru)
+      };
+
+      // render outputs
+      outStandar.textContent = stdEnd;
+      outTerlambat.textContent = terlambat;
+      outPulang.textContent = lastCalc.jamPulangGanti;
+
+      btnTambah.disabled = false;
     }
+
+    function resetForm(){
+      elHari.value = 'senin';
+      elJam.value = '07:30';
+      outStandar.textContent = '-';
+      outTerlambat.textContent = '-';
+      outPulang.textContent = '-';
+      btnTambah.disabled = true;
+      lastCalc = null;
+    }
+
+    // ====== Log handling ======
+    function addToLog(){
+      if(!lastCalc){ alert('Hitung terlebih dahulu.'); return; }
+      const now = new Date();
+      const tanggalInput = now.toLocaleString('id-ID');
+      logs.push({
+        hari: capitalizeID(lastCalc.hari),
+        jamDatang: lastCalc.jamDatang,
+        terlambat: lastCalc.terlambat,
+        jamPulangStandar: lastCalc.jamPulangStandar,
+        jamPulangGanti: lastCalc.jamPulangGanti,
+        tanggalInput
+      });
+      saveLogs(logs);
+      renderTable();
+      renderSummary();
+      btnTambah.disabled = true; // avoid duplicate unless recalc
+    }
+
+    function renderTable(){
+      tbody.innerHTML = '';
+      logs.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${idx+1}</td>
+          <td>${row.hari}</td>
+          <td>${row.jamDatang}</td>
+          <td>${row.terlambat}</td>
+          <td>${row.jamPulangStandar}</td>
+          <td>${row.jamPulangGanti}</td>
+          <td>${row.tanggalInput}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderSummary(){
+      const n = logs.length;
+      const totalLate = logs.reduce((a,b)=> a + Number(b.terlambat||0), 0);
+      const totalAdded = logs.reduce((a,b)=> a + (Number(b.terlambat||0) + 1), 0);
+      sumCount.textContent = n;
+      sumLate.textContent = totalLate;
+      sumAdded.textContent = n ? totalAdded : 0;
+      sumAvg.textContent = n ? Math.round(totalLate/n) : 0;
+    }
+
+    function clearLogs(){
+      if(!logs.length){ alert('Tidak ada data.'); return; }
+      if(confirm('Hapus semua riwayat?')){
+        logs = [];
+        saveLogs(logs);
+        renderTable();
+        renderSummary();
+      }
+    }
+
+    // ====== Export Excel ======
+    function downloadExcel(){
+      if(!logs.length){ alert('Tidak ada data untuk diunduh.'); return; }
+      // Convert to worksheet
+      const data = logs.map((r, i) => ({
+        No: i+1,
+        Hari: r.hari,
+        "Jam Datang": r.jamDatang,
+        "Keterlambatan (menit)": r.terlambat,
+        "Jam Pulang Standar": r.jamPulangStandar,
+        "Jam Pulang Ganti": r.jamPulangGanti,
+        "Tanggal Input": r.tanggalInput
+      }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Log Keterlambatan');
+
+      // Summary sheet
+      const summary = [[
+        'Total Entri', logs.length
+      ],[
+        'Total Keterlambatan (menit)', logs.reduce((a,b)=> a + Number(b.terlambat||0), 0)
+      ],[
+        'Total Tambahan (menit) [late+1]', logs.reduce((a,b)=> a + (Number(b.terlambat||0) + 1), 0)
+      ],[
+        'Rata-rata Keterlambatan (menit)', logs.length? Math.round(logs.reduce((a,b)=> a + Number(b.terlambat||0), 0)/logs.length) : 0
+      ]];
+      const ws2 = XLSX.utils.aoa_to_sheet([['REKAP']], {origin:0});
+      XLSX.utils.sheet_add_aoa(ws2, [['']], {origin:'A2'});
+      XLSX.utils.sheet_add_aoa(ws2, summary, {origin:'A3'});
+      XLSX.utils.book_append_sheet(wb, ws2, 'Rekap');
+
+      XLSX.writeFile(wb, 'rekap_keterlambatan.xlsx');
+    }
+
+    // ====== Helpers ======
+    function capitalizeID(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+    // ====== Event bindings ======
+    btnHitung.addEventListener('click', hitung);
+    btnTambah.addEventListener('click', addToLog);
+    btnReset.addEventListener('click', resetForm);
+    btnClear.addEventListener('click', clearLogs);
+    btnPrint.addEventListener('click', () => window.print());
+    btnExcel.addEventListener('click', downloadExcel);
+
+    // Initialize view
+    (function init(){
+      renderTable();
+      renderSummary();
+    })();
   </script>
 </body>
 </html>
